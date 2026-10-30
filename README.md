@@ -75,6 +75,28 @@ Melon Assembly loaded: '.\Mods\RestoryQOL.dll'
 
 ---
 
+## 踩坑与排查 / Troubleshooting
+
+遇到「装不上」「中文变方块」「菜单拖不动」「音效不停」这类问题，先看
+**[`docs/field-notes.md`](docs/field-notes.md)** —— 里面记了每个坑的根因、定位过程和验证方法，包括：
+
+- Nexus 下载为什么走不通、为什么必须用 GitHub 源码
+- BepInEx 5 为什么不支持 Unity 6（Nexus 那个"框架"包是 `5.4.23.6` 原样重打包）
+- 必须从 Steam 启动（否则 `SteamAPI_Init() failed`）
+- 游戏自带反篡改扫描的实测影响
+- IMGUI 中文方块 / `GUI.DragWindow` 坐标系 / 窗口高度自适应
+- FMOD 循环音泄漏（一键拧紧后螺丝声不停）的追法与修法
+- 编译期的 `EXEC COPY` 坑、游戏运行时文件被占用、PowerShell 5.1 的 ANSI 坑
+
+### 想自己查游戏内部？
+
+[`tools/asm-probe`](tools/asm-probe/README.md) 是只读的程序集探针，不需要 ILSpy / dnSpy：
+
+```bash
+dotnet run --project tools/asm-probe -- "<GAME>/Restory_Data/Managed/Restory.Assembly.dll" callers OnImmediateShortInteraction
+dotnet run --project tools/asm-probe -- "<GAME>/Restory_Data/Managed/Restory.Assembly.dll" il ThreadedElementSFX KillShortSound
+```
+
 ## 自己改字再编译
 
 ```bash

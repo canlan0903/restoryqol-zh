@@ -87,7 +87,22 @@ dotnet build -c Release -p:GamePath="<GAME>" -p:BepInExPath="<dir with BepInEx\c
 
 Output: `bin/Release/netstandard2.1/RestoryQOL.dll`. The project references game assemblies at `$(GamePath)\Restory_Data\Managed\*` and MelonLoader at `$(GamePath)\MelonLoader\net35\*`, so the loader must be installed (or the paths overridden) before building. This repo deliberately does **not** ship game DLLs.
 
-## 9. Hard rules for agents
+## 9. Troubleshooting quick map
+
+| Symptom | Where to look |
+|---|---|
+| `SteamAPI_Init() failed`, game exits instantly | Launch through Steam (`steam://rungameid/3812600`), never the exe directly (§4) |
+| CJK renders as boxes | Dynamic font lookup failed, see §5 and `docs/field-notes.md` §5.1 |
+| Menu title cannot be dragged | Fixed in this fork; the upstream bug is explained in `docs/field-notes.md` §5.2 |
+| Screwdriver sound loops forever after Z | Fixed in this fork; FMOD loop leak explained in `docs/field-notes.md` §6 |
+| Build fails with MSB3073 / `EXEC COPY` | Use this fork's csproj (MSBuild `Copy`), or `-p:SkipPostCopy=true` |
+| Build fails `Could not copy ... being used by another process` | The game is running; close it or pass `-p:SkipPostCopy=true` |
+| Need to inspect the game's own types/IL | `dotnet run --project tools/asm-probe -- <asm.dll> members|il|callers|strings <arg>` |
+| `[RuntimeIntegrityService] External interference detected` | Expected, see §6 |
+
+Full write-up of every dead end (Nexus CDN, BepInEx 5 on Unity 6, IMGUI coordinate spaces, FMOD loop leak, PowerShell ANSI) lives in `docs/field-notes.md`. Read it before re-deriving anything.
+
+## 10. Hard rules for agents
 
 - Never fabricate log lines. Quote the file, or say you could not read it.
 - Never download the game or game DLLs from third-party mirrors.
