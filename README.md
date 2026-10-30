@@ -26,9 +26,9 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 ### 只想拿 DLL，不想用脚本
 
-[**下载 Release `v1.0.1-zh`**](https://github.com/canlan0903/restoryqol-zh/releases/tag/v1.0.1-zh) → `RestoryQOL.dll`
+[**下载 Release `v1.0.2-zh`**](https://github.com/canlan0903/restoryqol-zh/releases) → `RestoryQOL.dll`
 → 丢进 `<游戏目录>\Mods\`。MelonLoader 仍需自己装一次（或跑 `scripts/install.ps1`）。
-sha256 `060fdf245cd6e261fe102dcdad53a47a217da058eaaedf158e0d6a2f53dda3ee`
+sha256 `34b663b068e824be192d0d9019c4bb5bba27ab9a5234e6be6b9d1b89353e1f77`
 
 ---
 
