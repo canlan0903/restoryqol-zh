@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>RestoryQOL</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>RestoryQOL</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Version>1.0.1</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <GenerateTargetFrameworkAttribute>true</GenerateTargetFrameworkAttribute>
+    <!-- Exclude decompiled game sources and CI tools from compilation -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);RestorySrc\**\*;tools\**\*</DefaultItemExcludes>
+    <!-- Unity 6000 assemblies have an indirect dependency on System.EnterpriseServices v4.0 -->
+    <NoWarn>$(NoWarn);MSB3258</NoWarn>
+
+    <!-- Universal build: one DLL works under MelonLoader or BepInEx.
+         Both entry points (Bootstrap.cs) ship in the same assembly.
+         Fall back to libs/BepInEx stubs when BepInEx isn't installed in the game. -->
+    <BepInExPath Condition="'$(BepInExPath)' == ''">$(GamePath)\BepInEx</BepInExPath>
+    <BepInExPath Condition="!Exists('$(BepInExPath)\core') And Exists('$(MSBuildThisFileDirectory)libs\BepInEx\core')">$(MSBuildThisFileDirectory)libs\BepInEx</BepInExPath>
+  </PropertyGroup>
+
+  <!-- Resolve the BepInEx 5 vs 6 core assembly names based on what is installed. -->
+  <Choose>
+    <When Condition="Exists('$(BepInExPath)\core\BepInEx.Core.dll')">
+      <PropertyGroup>
+        <BepInExCoreDll>$(BepInExPath)\core\BepInEx.Core.dll</BepInExCoreDll>
+        <BepInExMonoDll>$(BepInExPath)\core\BepInEx.Unity.Mono.dll</BepInExMonoDll>
+        <DefineConstants>$(DefineConstants);BEPINEX6</DefineConstants>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <!-- BepInEx 5: BaseUnityPlugin + Config + Logging all live in BepInEx.dll -->
+        <BepInExCoreDll>$(BepInExPath)\core\BepInEx.dll</BepInExCoreDll>
+        <BepInExMonoDll>$(BepInExPath)\core\BepInEx.dll</BepInExMonoDll>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <!-- net35 reference assemblies from NuGet (offline build support) -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Game managed assemblies -->
+    <Reference Include="Restory.Assembly">
+      <HintPath>$(GamePath)\Restory_Data\Managed\Restory.Assembly.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GamePath)\Restory_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(GamePath)\Restory_Data\Managed\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Rewired_Core">
+      <HintPath>$(GamePath)\Restory_Data\Managed\Rewired_Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RewiredAssembly">
+      <HintPath>$(GamePath)\Restory_Data\Managed\RewiredAssembly.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Zenject-usage">
+      <HintPath>$(GamePath)\Restory_Data\Managed\Zenject-usage.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- MelonLoader + BepInEx are always referenced (universal build).
+       MelonLoader bundles its own Harmony in MelonLoader\net35. -->
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(GamePath)\MelonLoader\net35\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GamePath)\MelonLoader\net35\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx.Core">
+      <HintPath>$(BepInExCoreDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx.Unity.Mono">
+      <HintPath>$(BepInExMonoDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <!-- Upstream used Exec COPY/cp here; that breaks when GamePath contains
+         forward slashes (EXEC COPY exit 1). MSBuild Copy is path-agnostic. -->
+    <Error Condition="'$(GamePath)' == ''" Text="GamePath is empty. Pass -p:GamePath=&quot;&lt;your ReStory install&gt;&quot; (see README)." />
+    <Copy Condition="Exists('$(GamePath)\Mods')" SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\Mods" SkipUnchangedFiles="false" />
+    <Copy Condition="Exists('$(BepInExPath)\plugins')" SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExPath)\plugins" SkipUnchangedFiles="false" />
+  </Target>
+</Project>

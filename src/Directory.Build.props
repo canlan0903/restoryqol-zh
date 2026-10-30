@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- Point this at YOUR ReStory install, either here or on the command line:
+           dotnet build -c Release -p:GamePath="E:\SteamLibrary\steamapps\common\Restory"
+         Left empty on purpose so a missing path fails loudly instead of
+         silently binding to another machine's copy. -->
+    <GamePath Condition="'$(GamePath)' == ''"></GamePath>
+  </PropertyGroup>
+</Project>
