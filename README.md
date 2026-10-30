@@ -24,6 +24,12 @@ powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 
 手动安装 / 别的平台看 [`docs/install-manual.md`](docs/install-manual.md)。
 
+### 只想拿 DLL，不想用脚本
+
+[**下载 Release `v1.0.1-zh`**](https://github.com/canlan0903/restoryqol-zh/releases/tag/v1.0.1-zh) → `RestoryQOL.dll`
+→ 丢进 `<游戏目录>\Mods\`。MelonLoader 仍需自己装一次（或跑 `scripts/install.ps1`）。
+sha256 `060fdf245cd6e261fe102dcdad53a47a217da058eaaedf158e0d6a2f53dda3ee`
+
 ---
 
 ## 为什么不用 Nexus 上的 BepInEx 框架
