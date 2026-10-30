@@ -45,7 +45,6 @@ namespace RestoryQOL
 
         private static Rect _windowRect = new Rect(20f, 80f, 380f, 420f);
         private static bool _visible = true;
-        private static bool _dragging;
         private static int _windowId = 266622;
 
         // 中文字体（Unity 内置 GUI 字体不含汉字，必须换成系统雅黑之类）
@@ -104,12 +103,29 @@ namespace RestoryQOL
             Log.Msg("RestoryQOL 已加载（中文界面版），按 F8 开关菜单。");
         }
 
+        // 拖动结束后记一行窗口位置：用户反馈「拖不动」时，日志能直接区分
+        // 「没收到拖拽」和「拖了但位置没变」。
+        private static Vector2 _lastWindowPos;
+        private static float _windowPosSettleTime;
+
         public static void RunFrame()
         {
             if (Input.GetKeyDown(KeyCode.F8))
             {
                 _visible = !_visible;
                 Log.Msg("[菜单] F8 切换 -> 显示: " + _visible);
+            }
+
+            var pos = _windowRect.position;
+            if (pos != _lastWindowPos)
+            {
+                _lastWindowPos = pos;
+                _windowPosSettleTime = UnityEngine.Time.unscaledTime;
+            }
+            else if (_windowPosSettleTime > 0f && UnityEngine.Time.unscaledTime - _windowPosSettleTime > 0.3f)
+            {
+                _windowPosSettleTime = 0f;
+                Log.Msg($"[窗口] 位置 -> ({pos.x:0}, {pos.y:0})");
             }
             Mods.AutoScrew.Run();
             Mods.RefreshMarketplace.Run();
@@ -204,19 +220,6 @@ namespace RestoryQOL
 
             GUILayout.EndVertical();
 
-            if (Event.current.type == EventType.MouseDrag && _dragging)
-            {
-                _windowRect.position += Event.current.delta;
-                _windowRect.position = new Vector2(
-                    Mathf.Clamp(_windowRect.position.x, -_windowRect.width + 60f, Screen.width - 40f),
-                    Mathf.Clamp(_windowRect.position.y, 0f, Screen.height - 40f));
-                Event.current.Use();
-            }
-            if (Event.current.type == EventType.MouseDown && _windowRect.Contains(Event.current.mousePosition))
-                _dragging = true;
-            if (Event.current.type == EventType.MouseUp)
-                _dragging = false;
-
             if (Event.current.type == EventType.Repaint)
             {
                 Rect last = GUILayoutUtility.GetLastRect();
@@ -224,7 +227,11 @@ namespace RestoryQOL
                     _windowRect.height = last.yMax + 34f;
             }
 
-            GUI.DragWindow(_windowRect);
+            // 标题栏拖动。GUI.DragWindow 的参数是「窗口内坐标」，不是屏幕坐标：
+            // 上游传的是 _windowRect（屏幕坐标 20,80,...），拖拽区被整体偏移到窗口中下部，
+            // 标题栏（y 0..26）恰好在区外 —— 所以按标题栏拖不动，反而在正文里拖动会整窗乱跑。
+            // 这里只认标题栏这一条 26px 高的区域，正文里的点击/开关不受影响。
+            GUI.DragWindow(new Rect(0f, 0f, _windowRect.width, 26f));
         }
     }
 }

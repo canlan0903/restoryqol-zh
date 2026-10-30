@@ -37,6 +37,17 @@ namespace RestoryQOL.Mods
         private static readonly HashSet<ThreadedElement> _acted = new HashSet<ThreadedElement>();
         private static float _lastErrorLogTime = -999f;
 
+        // 声音收尾。每颗螺丝上的 ThreadedElementSFX 监听 OnImmediateShortInteraction，
+        // 事件里 TryToStartSoundEvent(工具的 ScrewingSound) —— 这条事件是【循环】音，
+        // 正常靠下一次交互时 KillShortSound() 或离手时停掉。AutoScrew 在一帧里对 N 颗
+        // 螺丝各触发一次，最后一个 EventInstance 没人 kill，于是声音无限循环。
+        // 这里给每颗被拧的螺丝记时间戳，0.45s 后主动调 ThreadedElementSFX.KillShortSound()。
+        private static readonly Dictionary<ThreadedElement, float> _sfxDeadlines =
+            new Dictionary<ThreadedElement, float>();
+        private const float SfxTailSeconds = 0.45f;
+        private static MethodInfo _killShortSoundMethod;
+        private static MethodInfo _killHoldSoundMethod;
+
         public static void Run()
         {
             if (!Core.AutoScrew.Value) return;
@@ -44,10 +55,14 @@ namespace RestoryQOL.Mods
             var screwIn = Input.GetKey(KeyCode.Z);
             if (!unscrew && !screwIn)
             {
+                FlushAllSounds();
                 _acted.Clear();
                 _warnedNoTool = false;
                 return;
             }
+
+            // 上一轮拧过的螺丝，声音尾巴到点就掐掉。
+            TickSounds();
 
             var keyEdge = Input.GetKeyDown(KeyCode.X) || Input.GetKeyDown(KeyCode.Z);
 
@@ -207,7 +222,78 @@ namespace RestoryQOL.Mods
                     BindingFlags.NonPublic | BindingFlags.Instance);
                 _throwLooseMethod?.Invoke(device, new object[] { element });
             }
+
+            // 这颗螺丝刚被 OnImmediateShortInteraction 点着了一段循环音，排进收尾队列。
+            _sfxDeadlines[element] = UnityEngine.Time.unscaledTime + SfxTailSeconds;
             return SkipReason.None;
+        }
+
+        /// <summary>到点的螺丝静音。</summary>
+        private static void TickSounds()
+        {
+            if (_sfxDeadlines.Count == 0) return;
+            var now = UnityEngine.Time.unscaledTime;
+            List<ThreadedElement> due = null;
+            foreach (var kv in _sfxDeadlines)
+            {
+                if (kv.Value > now) continue;
+                (due ??= new List<ThreadedElement>()).Add(kv.Key);
+            }
+            if (due == null) return;
+            var killed = 0;
+            foreach (var element in due)
+            {
+                _sfxDeadlines.Remove(element);
+                killed += SilenceElement(element);
+            }
+            if (killed > 0)
+                Core.Log.Msg($"[AutoScrew] 音效收尾：停止 {killed} 个螺丝音效");
+        }
+
+        /// <summary>松键 / 退出时把所有还挂着的螺丝声音立刻掐掉。</summary>
+        private static void FlushAllSounds()
+        {
+            if (_sfxDeadlines.Count == 0) return;
+            var elements = new List<ThreadedElement>(_sfxDeadlines.Keys);
+            _sfxDeadlines.Clear();
+            var killed = 0;
+            foreach (var element in elements) killed += SilenceElement(element);
+            if (killed > 0)
+                Core.Log.Msg($"[AutoScrew] 音效收尾：停止 {killed} 个螺丝音效");
+        }
+
+        /// <summary>
+        /// ThreadedElementSFX 是 internal/私有实现细节，按类型名找组件再用反射调它的
+        /// KillShortSound/KillHoldSound，避免编译期硬绑到游戏内部类型。
+        /// </summary>
+        private static int SilenceElement(ThreadedElement element)
+        {
+            if (element == null) return 0;
+            var killed = 0;
+            try
+            {
+                foreach (var behaviour in element.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (behaviour == null) continue;
+                    var type = behaviour.GetType();
+                    if (type.Name != "ThreadedElementSFX") continue;
+                    var flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+                    _killShortSoundMethod ??= type.GetMethod("KillShortSound", flags);
+                    _killHoldSoundMethod  ??= type.GetMethod("KillHoldSound", flags);
+                    _killShortSoundMethod?.Invoke(behaviour, null);
+                    _killHoldSoundMethod?.Invoke(behaviour, null);
+                    killed++;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (UnityEngine.Time.unscaledTime - _lastErrorLogTime > 2f)
+                {
+                    _lastErrorLogTime = UnityEngine.Time.unscaledTime;
+                    Core.Log.Warning($"[AutoScrew] silence failed: {ex.Message}");
+                }
+            }
+            return killed;
         }
 
         private static bool IsTweenPlaying(object tweener)

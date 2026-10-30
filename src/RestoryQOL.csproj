@@ -124,7 +124,8 @@
     <!-- Upstream used Exec COPY/cp here; that breaks when GamePath contains
          forward slashes (EXEC COPY exit 1). MSBuild Copy is path-agnostic. -->
     <Error Condition="'$(GamePath)' == ''" Text="GamePath is empty. Pass -p:GamePath=&quot;&lt;your ReStory install&gt;&quot; (see README)." />
-    <Copy Condition="Exists('$(GamePath)\Mods')" SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\Mods" SkipUnchangedFiles="false" />
+    <!-- -p:SkipPostCopy=true builds without touching the install (game running / CI). -->
+    <Copy Condition="Exists('$(GamePath)\Mods') And '$(SkipPostCopy)' != 'true'" SourceFiles="$(TargetPath)" DestinationFolder="$(GamePath)\Mods" SkipUnchangedFiles="false" />
     <Copy Condition="Exists('$(BepInExPath)\plugins')" SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExPath)\plugins" SkipUnchangedFiles="false" />
   </Target>
 </Project>
